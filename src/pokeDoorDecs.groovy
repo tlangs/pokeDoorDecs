@@ -67,7 +67,7 @@ residents.each { resident ->
 
 println "Retrieved pokemon sprites."
 
-def dir = new File("docs")
+def dir = new File("decs")
 if (!dir.exists()) {
     dir.mkdir()
 }
