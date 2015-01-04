@@ -4,6 +4,7 @@ import groovyx.net.http.HTTPBuilder
 import org.fusesource.jansi.Ansi
 
 import java.awt.Color
+import java.awt.FontMetrics
 import java.awt.Graphics
 import java.awt.image.BufferedImage
 import javax.imageio.*
@@ -56,7 +57,12 @@ residents.each { resident ->
 residents.each { resident ->
     def image = new BufferedImage((resident.sprite.getWidth() * 3) + 50 ,(resident.sprite.getHeight() * 3) + 70, BufferedImage.TYPE_INT_ARGB)
     def g = image.getGraphics()
-    g.setFont(new Font ("Garamond", Font.ITALIC , 40))
+    g.setFont(new Font ("Garamond", Font.ITALIC , 60))
+
+    FontMetrics fontMetrics = g.getFontMetrics()
+    if (fontMetrics.stringWidth(resident.name) > resident.sprite.getWidth() * 3) {
+        g.setFont(new Font ("Garamond", Font.ITALIC , 40))
+    }
 
     g.drawImage(resident.sprite, 25, 0, resident.sprite.getWidth() * 3 , resident.sprite.getHeight() * 3, null)
     g.setColor(Color.BLACK)
