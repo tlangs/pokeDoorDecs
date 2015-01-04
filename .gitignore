@@ -28,3 +28,9 @@
 
 # "temporary" build files
 /target
+
+# IntelliJ IDEA
+*.iml
+.idea/
+
+/decs/*.png
