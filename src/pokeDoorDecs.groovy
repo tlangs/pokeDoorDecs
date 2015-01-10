@@ -1,72 +1,107 @@
+
+/**
+ * Created by trevyn on 1/7/15.
+ */
+
 @Grab(group = 'org.codehaus.groovy.modules.http-builder', module = 'http-builder', version = '0.7.2')
 import groovy.json.*
 import groovyx.net.http.HTTPBuilder
 
 import java.awt.Color
 import java.awt.FontMetrics
+import java.awt.Graphics2D
+import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import javax.imageio.*
 import java.awt.Font
 
-class Resident {
+class Person {
 
     String name
     BufferedImage sprite
     BufferedImage image
-    Integer num
+    String pokemon
 
-    Resident(String name) {
+    Person(String name) {
         this.name = name
     }
 }
-
-def http = new HTTPBuilder("http://pokeapi.co/")
-def names = new JsonSlurper().parse(new File("residents.json"))
-def residents = []
-
-names.each { name ->
-    def resident = new Resident(name)
-    def num = Math.random() * 151
-    num = (Integer) Math.ceil(num)
-    resident.num = num
-    residents.add(resident)
+def input
+try {
+    if (args.size() == 0) {
+        throw new UnsupportedOperationException("Please provide a file.")
+    }
+    input = new File(args[0])
+    if (!input.exists()) {
+        throw new FileNotFoundException("The file was not found.")
+    }
+} catch(Exception e) {
+    println e.getMessage()
+    System.exit(0)
 }
 
-println "Parsed ${residents.size()} residents."
+def slurper = new JsonSlurper()
+def names = slurper.parse(input)
+def people = []
 
-residents.each { resident ->
+names.each { obj ->
+    def person = new Person(obj.name)
+    person.pokemon = obj.pokemon
+    people.add(person)
+}
+
+println "Parsed ${people.size()} names."
+
+
+people.each { person ->
     try {
-        http.get(path: "api/v1/pokemon/${resident.num}/",) { resp, info ->
+        def pokedex = slurper.parseText(new URL("http://pokeapi.co/api/v1/pokedex/1").text)
 
-            http.get(path: "api/v1/sprite/${resident.num}") { resp2, spriteInfo ->
-                def imgURL = spriteInfo["image"]
-                def url = new URL("http://pokeapi.co/${imgURL}")
-                resident.sprite = ImageIO.read(url)
-
-                println "Found image for ${resident.name}."
-            }
+        def mon
+        if (!person.pokemon) {
+            def num = (Integer) Math.ceil(Math.random() * 151)
+            mon = pokedex["pokemon"].find {pokemon -> pokemon.resource_uri == "api/v1/pokemon/${num}/"}
+        } else {
+            mon = pokedex["pokemon"].find {a -> a.name == person.pokemon}
         }
+
+        def info2 = slurper.parseText(new URL("http://pokeapi.co/${mon.resource_uri}").text)
+        def spriteInfo2 = slurper.parseText(new URL("http://pokeapi.co/${info2.sprites[0].resource_uri}").text)
+        person.sprite = ImageIO.read(new URL("http://pokeapi.co/${spriteInfo2.image}"))
+        println "Found image for ${person.name}."
     } catch (IOException e) {
         println "Could not get image from URL"
         println e.getMessage();
     }
 }
 
-residents.each { resident ->
-    def image = new BufferedImage((resident.sprite.getWidth() * 3) + 50 ,(resident.sprite.getHeight() * 3) + 70, BufferedImage.TYPE_INT_ARGB)
-    def g = image.getGraphics()
-    g.setFont(new Font ("Garamond", Font.ITALIC , 60))
+people.each { person ->
+    def image = new BufferedImage((person.sprite.getWidth() * 3) + 50 ,(person.sprite.getHeight() * 3) + 70, BufferedImage.TYPE_INT_ARGB)
+    def g = (Graphics2D)image.getGraphics()
 
+    def font = Font.createFont(Font.TRUETYPE_FONT, new File("fonts/PokemonSolid.ttf"))
+    float size = 120F
+    g.setFont(font.deriveFont(size))
     FontMetrics fontMetrics = g.getFontMetrics()
-    if (fontMetrics.stringWidth(resident.name) > resident.sprite.getWidth() * 3) {
-        g.setFont(new Font ("Garamond", Font.ITALIC , 40))
+    while (fontMetrics.stringWidth(person.name) > person.sprite.getWidth() * 3 - 50) {
+        size--
+        g.setFont(font.deriveFont(size))
+        fontMetrics = g.getFontMetrics()
     }
 
-    g.drawImage(resident.sprite, 25, 0, resident.sprite.getWidth() * 3 , resident.sprite.getHeight() * 3, null)
-    g.setColor(Color.BLACK)
-    g.drawString(resident.name, 50, (resident.sprite.getHeight() * 3) + 10)
+    g.setColor(Color.WHITE)
+    g.fillRect(0, 0, image.getWidth(), image.getHeight())
+    g.drawImage(person.sprite, 25, 0, person.sprite.getWidth() * 3 , person.sprite.getHeight() * 3, null)
 
-    resident.image = image
+    g.setColor(Color.BLACK)
+    g.setRenderingHint(
+            RenderingHints.KEY_TEXT_ANTIALIASING,
+            RenderingHints.VALUE_TEXT_ANTIALIAS_GASP)
+
+    def fontht = fontMetrics.getHeight()
+    g.drawString(person.name, 50, (person.sprite.getHeight() * 3) + fontht/4)
+
+    person.image = image
 }
 
 println "Retrieved pokemon sprites."
@@ -79,9 +114,8 @@ dir.eachFile { file ->
     file.delete()
 }
 
-residents.each { resident  ->
-    ImageIO.write(resident.image, "png", new File("decs/${resident.name}.png"))
+people.each { person  ->
+    ImageIO.write(person.image, "png", new File("decs/${person.name}.png"))
 }
 
-
-println "Done! Processed ${residents.size()} residents."
+println "Done! Processed ${people.size()} people."
