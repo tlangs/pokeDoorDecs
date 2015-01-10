@@ -1,11 +1,9 @@
 @Grab(group = 'org.codehaus.groovy.modules.http-builder', module = 'http-builder', version = '0.7.2')
 import groovy.json.*
 import groovyx.net.http.HTTPBuilder
-import org.fusesource.jansi.Ansi
 
 import java.awt.Color
 import java.awt.FontMetrics
-import java.awt.Graphics
 import java.awt.image.BufferedImage
 import javax.imageio.*
 import java.awt.Font
