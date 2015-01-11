@@ -120,7 +120,7 @@ people.each { person ->
             }
         }
 
-        ids = ids.flatten().sort()
+        ids = ids.flatten()
 
         def mon = [:]
         if (!person.pokemon) {
@@ -129,9 +129,9 @@ people.each { person ->
             mon = pokedex["pokemon"].find {a -> a.name.equalsIgnoreCase(person.pokemon)}
         }
 
-        def info2 = slurper.parseText(new URL("http://pokeapi.co/${mon.resource_uri}").text)
-        def spriteInfo2 = slurper.parseText(new URL("http://pokeapi.co/${info2.sprites[0].resource_uri}").text)
-        person.sprite = ImageIO.read(new URL("http://pokeapi.co/${spriteInfo2.image}"))
+        def info = slurper.parseText(new URL("http://pokeapi.co/${mon.resource_uri}").text)
+        def spriteInfo = slurper.parseText(new URL("http://pokeapi.co/${info.sprites[0].resource_uri}").text)
+        person.sprite = ImageIO.read(new URL("http://pokeapi.co/${spriteInfo.image}"))
         println "Found image for ${person.name}."
 
     } catch (IOException e) {
