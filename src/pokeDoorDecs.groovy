@@ -26,22 +26,72 @@ class Person {
         this.name = name
     }
 }
-def input
+
+def generations = [kanto: 1..151, johto: 152..251, hoenn: 252..386,
+                   sinnoh: 387..493, unova: 494..649, kalos: 650..720]
+
+def cli = new CliBuilder(usage: "pokeDoorDecs.groovy [-h] [-d path] [-r regions] [file ...]")
+// Create the list of options.
+cli.with {
+    h longOpt: "help", "Display the help screen"
+    d longOpt: "directory", args: 1, argName: "directory", "Define an output directory"
+    r longOpt: "regions", args: 1, argName: "regions", "Define which regions to use. Ex: \"johto,hoenn,kanto\""
+
+}
+
+def options = cli.parse(args)
+
+if (!options) {
+    cli.usage()
+    System.exit(0)
+}
+
+if (options.h) {
+    println "pokeDoorDecs makes pictures with names and pokemon. \n" +
+            "It expects a well formatted list of JSON object, with each object having a name. \n" +
+            "A pokemon can be provided, which will be matched by name ignoring case. \n" +
+            "If no pokemon is provided, then a random pokemon pokemon will be chosen. \n" +
+            "By default, all pokemon are available to be randomly selected. \n" +
+            "This can be changed by adding the -r flag and specifying which regions to use, separated by commas. \n\n" +
+            "Images are written to the current working directory, unless a directory is provided using the -d flag. \n" +
+            "Any existing images with the same name will be overwritten. \n\n" +
+            "An example of a JSON list accepted follows:\n\n" +
+            "[\n" +
+            "\t{\n" +
+            "\t\t\"name\": \"Trevyn Langsford\",\n" +
+            "\t\t\"pokemon\": \"arcanine\"\n" +
+            "\t},\n" +
+            "\t{\n" +
+            "\t\t\"name\": \"Dwight Clarke\"\n" +
+            "\t}\n" +
+            "]\n\n" +
+            "Calling 'groovy pokeDoorDecs.groovy -r kanto,johto file.json' where file.json contains the example JSON \n" +
+            "list would produce a door dec for Trevyn with Arcanine and choose a random pokemon from the Johto region \n" +
+            "for Dwight."
+    System.exit(0)
+}
+
+def file
 try {
-    if (args.size() == 0) {
-        throw new UnsupportedOperationException("Please provide a file.")
-    }
-    input = new File(args[0])
-    if (!input.exists()) {
-        throw new FileNotFoundException("The file was not found.")
+    def extraArgs = options.arguments()
+    if (extraArgs) {
+        file = new File(options.arguments()[0])
+        if (!file.exists()) {
+            throw new FileNotFoundException("The file was not found.")
+        }
+    } else {
+        cli.usage()
+        System.exit(0)
     }
 } catch(Exception e) {
     println e.getMessage()
     System.exit(0)
 }
 
+
+
 def slurper = new JsonSlurper()
-def names = slurper.parse(input)
+def names = slurper.parse(file)
 def people = []
 
 names.each { obj ->
@@ -52,23 +102,36 @@ names.each { obj ->
 
 println "Parsed ${people.size()} names."
 
-
+def pokedex = slurper.parseText(new URL("http://pokeapi.co/api/v1/pokedex/1").text)
 people.each { person ->
     try {
-        def pokedex = slurper.parseText(new URL("http://pokeapi.co/api/v1/pokedex/1").text)
-
-        def mon
-        if (!person.pokemon) {
-            def num = (Integer) Math.ceil(Math.random() * 151)
-            mon = pokedex["pokemon"].find {pokemon -> pokemon.resource_uri == "api/v1/pokemon/${num}/"}
+        def ids = []
+        def regions
+        if (options.r) {
+            regions = options.regions.split(",")
+            regions.each {region ->
+                ids << generations["${region}"]
+            }
         } else {
-            mon = pokedex["pokemon"].find {a -> a.name == person.pokemon}
+            generations.each{region ->
+                ids << region.value
+            }
+        }
+
+        ids = ids.flatten().sort()
+
+        def mon = [:]
+        if (!person.pokemon) {
+            mon.resource_uri = "api/v1/pokemon/${ids[(Integer) Math.floor(Math.random() * ids.size())]}/"
+        } else {
+            mon = pokedex["pokemon"].find {a -> a.name.equalsIgnoreCase(person.pokemon)}
         }
 
         def info2 = slurper.parseText(new URL("http://pokeapi.co/${mon.resource_uri}").text)
         def spriteInfo2 = slurper.parseText(new URL("http://pokeapi.co/${info2.sprites[0].resource_uri}").text)
         person.sprite = ImageIO.read(new URL("http://pokeapi.co/${spriteInfo2.image}"))
         println "Found image for ${person.name}."
+
     } catch (IOException e) {
         println "Could not get image from URL"
         println e.getMessage();
@@ -76,7 +139,9 @@ people.each { person ->
 }
 
 people.each { person ->
-    def image = new BufferedImage((person.sprite.getWidth() * 3) + 50 ,(person.sprite.getHeight() * 3) + 70, BufferedImage.TYPE_INT_ARGB)
+    def image = new BufferedImage(
+            (person.sprite.getWidth() * 3) + 50 ,(person.sprite.getHeight() * 3) + 70,
+            BufferedImage.TYPE_INT_ARGB)
     def g = (Graphics2D)image.getGraphics()
 
     def font = Font.createFont(Font.TRUETYPE_FONT, new File("fonts/PokemonSolid.ttf"))
@@ -106,16 +171,17 @@ people.each { person ->
 
 println "Retrieved pokemon sprites."
 
-def dir = new File("decs")
+def path = "."
+if (options.d) {
+    path = options.directory
+}
+def dir = new File(path)
 if (!dir.exists()) {
     dir.mkdir()
 }
-dir.eachFile { file ->
-    file.delete()
-}
 
 people.each { person  ->
-    ImageIO.write(person.image, "png", new File("decs/${person.name}.png"))
+    ImageIO.write(person.image, "png", new File("${path}/${person.name}.png"))
 }
 
 println "Done! Processed ${people.size()} people."
