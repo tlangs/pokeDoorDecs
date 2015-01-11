@@ -52,9 +52,11 @@ if (options.h) {
             "A pokemon can be provided, which will be matched by name ignoring case. \n" +
             "If no pokemon is provided, then a random pokemon pokemon will be chosen. \n" +
             "By default, all pokemon are available to be randomly selected. \n" +
-            "This can be changed by adding the -r flag and specifying which regions to use, separated by commas. \n\n" +
-            "Images are written to the current working directory, unless a directory is provided using the -d flag. \n" +
-            "Any existing images with the same name will be overwritten. \n\n" +
+            "This can be changed by adding the -r flag and specifying which regions to use, \n" +
+            "separated by commas. \n\n" +
+            "Images are written to the current working directory, unless a directory is \n" +
+            "provided using the -d flag. Any existing images with the same name will be \n" +
+            "overwritten. \n\n" +
             "An example of a JSON list accepted follows:\n\n" +
             "[\n" +
             "\t{\n" +
@@ -65,9 +67,9 @@ if (options.h) {
             "\t\t\"name\": \"Dwight Clarke\"\n" +
             "\t}\n" +
             "]\n\n" +
-            "Calling 'groovy pokeDoorDecs.groovy -r kanto,johto file.json' where file.json contains the example JSON \n" +
-            "list would produce a door dec for Trevyn with Arcanine and choose a random pokemon from the Johto region \n" +
-            "for Dwight."
+            "Calling 'groovy pokeDoorDecs.groovy -r kanto,johto file.json' where file.json \n" +
+            "contains the example JSON list would produce a door dec for Trevyn with \n" +
+            "Arcanine and choose a random pokemon from the Johto region for Dwight."
     System.exit(0)
 }
 
